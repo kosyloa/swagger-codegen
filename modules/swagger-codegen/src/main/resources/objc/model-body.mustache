@@ -43,7 +43,16 @@
  * This method is used by `JSONModel`.
  */
 + (JSONKeyMapper *)keyMapper {
-  return [[JSONKeyMapper alloc] initWithModelToJSONDictionary:@{ {{#vars}}@"{{name}}": @"{{baseName}}"{{#hasMore}}, {{/hasMore}}{{/vars}} }];
+  JSONKeyMapper *parentKeyMapper;
+
+  if(([super superclass] != [SWGObject class]) && [[super superclass] respondsToSelector:@selector(keyMapper)]) {
+    parentKeyMapper = [[super superclass] performSelector:@selector(keyMapper)];
+  }
+  if(parentKeyMapper) {
+    return [JSONKeyMapper baseMapper:parentKeyMapper withModelToJSONExceptions:@{ {{#vars}}@"{{name}}": @"{{baseName}}"{{#hasMore}}, {{/hasMore}}{{/vars}} }];
+  }
+  JSONKeyMapper *keymapper = [[JSONKeyMapper alloc] initWithModelToJSONDictionary:@{ {{#vars}}@"{{name}}": @"{{baseName}}"{{#hasMore}}, {{/hasMore}}{{/vars}} }];
+  return keymapper;
 }
 
 /**
@@ -52,9 +61,14 @@
  * This method is used by `JSONModel`.
  */
 + (BOOL)propertyIsOptional:(NSString *)propertyName {
-
   NSArray *optionalProperties = @[{{#vars}}{{^required}}@"{{name}}"{{#hasMore}}, {{/hasMore}}{{/required}}{{/vars}}];
-  return [optionalProperties containsObject:propertyName];
+  BOOL result = [optionalProperties containsObject:propertyName];
+  if(!result) {
+    if([[super superclass] respondsToSelector:@selector(propertyIsOptional:)]){
+      result = [[super superclass] performSelector:@selector(propertyIsOptional:) withObject:propertyName];
+    }
+  }
+  return result;
 }
 
 {{/model}}
